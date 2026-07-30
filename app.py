@@ -17,51 +17,34 @@ st.markdown("Your AI-powered community guide and civic helper.")
 # Explicit absolute paths pointing directly to your workspace files
 WORKSPACE_DIR = os.path.expanduser("~/.zeroclaw/workspace")
 
-def build_system_instruction():
-    instruction_parts = []
-    
-    # 1. Load core persona files first as primary system rules
-    core_persona_files = ["SOUL.md", "IDENTITY.md", "AGENTS.md"]
-    data_files = ["upcoming_projects.md", "facility_booking.md", "issue_reporting.md", "community_events.md"]
-    
+def build_workspace_context():
+    knowledge_parts = []
+    target_files = ["SOUL.md", "IDENTITY.md", "AGENTS.md", "upcoming_projects.md", "facility_booking.md", "issue_reporting.md", "community_events.md"]
     loaded = set()
     
-    instruction_parts.append("=== SYSTEM PERSONA & RULES ===")
-    for filename in core_persona_files:
-        filepath = os.path.join(WORKSPACE_DIR, filename)
-        if os.path.exists(filepath):
-            loaded.add(filename)
-            try:
-                with open(filepath, "r", encoding="utf-8") as f:
-                    instruction_parts.append(f.read())
-            except Exception:
-                pass
-                
-    instruction_parts.append("\n=== OFFICIAL TOWN DATA FILES ===")
-    for filename in data_files:
-        filepath = os.path.join(WORKSPACE_DIR, filename)
-        if os.path.exists(filepath):
-            loaded.add(filename)
-            try:
-                with open(filepath, "r", encoding="utf-8") as f:
-                    instruction_parts.append(f"--- {filename} ---\n{f.read()}")
-            except Exception:
-                pass
-                
-    # Load any remaining markdown files just in case
     if os.path.exists(WORKSPACE_DIR):
+        for filename in target_files:
+            filepath = os.path.join(WORKSPACE_DIR, filename)
+            if os.path.exists(filepath):
+                loaded.add(filename)
+                try:
+                    with open(filepath, "r", encoding="utf-8") as f:
+                        knowledge_parts.append(f"=== {filename} ===\n{f.read()}")
+                except Exception:
+                    pass
+                    
         for filename in sorted(os.listdir(WORKSPACE_DIR)):
             if filename.endswith(".md") and filename not in loaded:
                 filepath = os.path.join(WORKSPACE_DIR, filename)
                 try:
                     with open(filepath, "r", encoding="utf-8") as f:
-                        instruction_parts.append(f"--- {filename} ---\n{f.read()}")
+                        knowledge_parts.append(f"=== {filename} ===\n{f.read()}")
                 except Exception:
                     pass
                     
-    return "\n\n".join(instruction_parts)
+    return "\n\n".join(knowledge_parts)
 
-system_instruction = build_system_instruction()
+workspace_knowledge = build_workspace_context()
 
 # Grab OpenRouter API key from environment
 api_key = os.environ.get("OPENAI_API_KEY") or os.environ.get("OPENROUTER_API_KEY")
@@ -94,7 +77,15 @@ if prompt := st.chat_input("Ask a question about your community..."):
                     base_url="https://openrouter.ai/api/v1"
                 )
                 
-                messages_payload = [{"role": "system", "content": system_instruction}]
+                # Force-inject the workspace context and identity into the system payload securely
+                system_prompt = (
+                    "You are the We Strive Civic Assistant, an official community guide for Fuquay-Varina. "
+                    "You must NEVER state that you are a generic AI model. You derive your entire identity, purpose, "
+                    "and knowledge strictly from the workspace files provided below:\n\n"
+                    f"{workspace_knowledge}"
+                )
+                
+                messages_payload = [{"role": "system", "content": system_prompt}]
                 for msg in st.session_state.messages:
                     messages_payload.append({"role": msg["role"], "content": msg["content"]})
 
