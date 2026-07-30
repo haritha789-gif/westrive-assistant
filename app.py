@@ -23,8 +23,8 @@ def load_all_workspace_knowledge():
     knowledge_parts = []
     paths_to_check = [WORKSPACE_DIR, ALT_WORKSPACE_DIR]
     
-    # Target specific data files first so they are processed properly
-    priority_files = ["AGENTS.md", "upcoming_projects.md", "facility_booking.md", "issue_reporting.md"]
+    # Target identity, soul, and agent files first so they take absolute precedence
+    priority_files = ["USER.md", "SOUL.md", "IDENTITY.md", "AGENTS.md", "upcoming_projects.md", "facility_booking.md", "issue_reporting.md"]
     loaded_files = set()
     
     for base_path in paths_to_check:
@@ -58,12 +58,8 @@ def load_all_workspace_knowledge():
 # Gather all markdown system prompts and data files dynamically
 workspace_knowledge = load_all_workspace_knowledge()
 
-# Keep system instruction clean and let AGENTS.md guide the orchestrator behavior
-system_instruction = f"""You are the We Strive Civic Assistant orchestrator. Follow all operational guidelines, domain routing, and formatting rules specified in AGENTS.md using ONLY the official town data files provided below.
-
-OFFICIAL TOWN KNOWLEDGE & FILES:
-{workspace_knowledge}
-"""
+# Feed the entire workspace knowledge directly as the system instruction so SOUL.md, IDENTITY.md, and AGENTS.md govern the core persona completely
+system_instruction = workspace_knowledge
 
 # Grab OpenRouter API key from environment
 api_key = os.environ.get("OPENAI_API_KEY") or os.environ.get("OPENROUTER_API_KEY")
@@ -104,7 +100,7 @@ if prompt := st.chat_input("Ask a question about your community..."):
                 response = client.chat.completions.create(
                     model=model_name,
                     messages=messages_payload,
-                    temperature=0.1, # Slight flexibility for keyword/semantic matching without hallucinations
+                    temperature=0.1,
                 )
                 
                 bot_reply = response.choices[0].message.content
