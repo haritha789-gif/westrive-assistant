@@ -18,24 +18,41 @@ st.markdown("Your AI-powered community guide and civic helper.")
 WORKSPACE_DIR = os.path.expanduser("~/.zeroclaw/workspace")
 ALT_WORKSPACE_DIR = os.path.expanduser("~/.zeroclaw/workspace/westrive-deploy")
 
-# Helper function to read all markdown files in the workspace directory
+# Helper function to read all markdown files in the workspace directory with data prioritization
 def load_all_workspace_knowledge():
     knowledge_parts = []
-    dirs_to_check = [WORKSPACE_DIR, ALT_WORKSPACE_DIR]
-    seen_files = set()
-
-    for d in dirs_to_check:
-        if os.path.exists(d):
-            for filename in sorted(os.listdir(d)):
-                if filename.endswith(".md") and filename not in seen_files:
-                    seen_files.add(filename)
-                    filepath = os.path.join(d, filename)
+    paths_to_check = [WORKSPACE_DIR, ALT_WORKSPACE_DIR]
+    
+    # Target specific data files first so they are processed properly
+    priority_files = ["upcoming_projects.md", "facility_booking.md", "issue_reporting.md", "AGENTS.md"]
+    loaded_files = set()
+    
+    for base_path in paths_to_check:
+        if os.path.exists(base_path):
+            # Load priority data files first
+            for filename in priority_files:
+                filepath = os.path.join(base_path, filename)
+                if os.path.exists(filepath) and filename not in loaded_files:
+                    loaded_files.add(filename)
                     try:
                         with open(filepath, "r", encoding="utf-8") as f:
                             content = f.read()
-                            knowledge_parts.append(f"--- FILE: {filename} ---\n{content}")
+                            knowledge_parts.append(f"=== OFFICIAL DATA FILE: {filename} ===\n{content}")
                     except Exception:
                         pass
+            
+            # Load any remaining markdown files
+            for filename in sorted(os.listdir(base_path)):
+                if filename.endswith(".md") and filename not in loaded_files:
+                    loaded_files.add(filename)
+                    filepath = os.path.join(base_path, filename)
+                    try:
+                        with open(filepath, "r", encoding="utf-8") as f:
+                            content = f.read()
+                            knowledge_parts.append(f"=== FILE: {filename} ===\n{content}")
+                    except Exception:
+                        pass
+                        
     return "\n\n".join(knowledge_parts)
 
 # Gather all markdown system prompts and data files dynamically
