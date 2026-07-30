@@ -28,10 +28,9 @@ def build_workspace_context():
         if os.path.exists(filepath):
             loaded.add(filename)
             try:
+                # Clean load, no line numbers or formatting hacks
                 with open(filepath, "r", encoding="utf-8") as f:
-                    lines = f.readlines()
-                    numbered_content = "".join([f"{i+1}: {line}" for i, line in enumerate(lines)])
-                    knowledge_parts.append(f"=== {filename} ===\n{numbered_content}")
+                    knowledge_parts.append(f"=== {filename} ===\n{f.read()}")
             except Exception as e:
                 knowledge_parts.append(f"=== {filename} ===\nERROR READING FILE: {str(e)}")
         else:
@@ -76,11 +75,10 @@ if prompt := st.chat_input("Ask a question about your community..."):
                     base_url="https://openrouter.ai/api/v1"
                 )
                 
+                # Clean, minimal system prompt that delegates completely to your files
                 system_prompt = (
-                    "You are the We Strive Civic Assistant, an official community guide for Fuquay-Varina. "
-                    "You must NEVER guess or make up information. If a project (like 'Hilltop Bluffs') is not in the text below, explicitly say 'I have no records of that project.' "
-                    "All workspace files below have exact line numbers prepended (e.g., '1: # Heading'). "
-                    "When answering, you MUST cite the file name and the exact line number where you found the information.\n\n"
+                    "Your entire identity, persona, rules, and knowledge base are defined by the workspace files provided below. "
+                    "Read, comprehend, and self-direct your responses strictly based on these files.\n\n"
                     f"{workspace_knowledge}"
                 )
                 
@@ -91,7 +89,7 @@ if prompt := st.chat_input("Ask a question about your community..."):
                 response = client.chat.completions.create(
                     model=model_name,
                     messages=messages_payload,
-                    temperature=0.0,
+                    temperature=0.1,
                 )
                 
                 bot_reply = response.choices[0].message.content
