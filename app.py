@@ -1,3 +1,4 @@
+import requests
 import streamlit as st
 
 st.set_page_config(
@@ -26,15 +27,25 @@ if prompt := st.chat_input("Ask a question about your community..."):
     # Generate response
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
-            # Simulated intelligent civic response for public testing demo
-            # (You can replace this logic later with a requests.post to your live backend URL)
-            prompt_lower = prompt.lower()
-            if "pool" in prompt_lower or "water" in prompt_lower:
-                bot_reply = "During regional drought conditions in our area, temporary pool water restrictions may apply. Please check local town guidelines regarding outdoor water conservation limits before filling."
-            elif "scout" in prompt_lower or "badge" in prompt_lower:
-                bot_reply = "For technology merit badges in a short classroom setting, introductory digital safety, basic coding concepts, or civic tech project outlines work best!"
-            else:
-                bot_reply = f"Thanks for reaching out to 'We Strive'! I've logged your question: '{prompt}'. Our team will use this to improve our community assistance tools."
+            try:
+                # Replace the URL below with your active LocalTunnel URL
+                tunnel_url = "https://upset-frogs-rule.loca.lt/webhook"
+
+                payload = {"message": prompt}
+                response = requests.post(tunnel_url, json=payload, timeout=30)
+
+                if response.status_code == 200:
+                    data = response.json()
+                    bot_reply = (
+                        data.get("reply")
+                        or data.get("response")
+                        or str(data)
+                    )
+                else:
+                    bot_reply = f"Error: Received status code {response.status_code}"
+
+            except Exception as e:
+                bot_reply = f"Connection error: Could not reach backend engine. ({e})"
 
             st.markdown(bot_reply)
             st.session_state.messages.append(
