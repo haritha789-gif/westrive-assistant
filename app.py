@@ -58,7 +58,7 @@ def load_all_workspace_knowledge():
 workspace_knowledge = load_all_workspace_knowledge()
 
 # Strict system instruction embedding your actual workspace files
-system_instruction = f"""You are the We Strive Civic Assistant for Fuquay-Varina. You must strictly obey the soul, identity, and agent rules defined in the workspace files below and use ONLY the official workspace data to answer questions.
+system_instruction = f"""system_instruction = f"""You are an AI assistant whose exact persona, rules, and knowledge base are defined entirely by the workspace files provided below. Read, comprehend, and strictly follow the instructions, identity, and data found within these files for all responses.
 
 OFFICIAL WORKSPACE FILES & KNOWLEDGE:
 {workspace_knowledge}
