@@ -17,52 +17,51 @@ st.markdown("Your AI-powered community guide and civic helper.")
 # Explicit absolute paths pointing directly to your workspace files
 WORKSPACE_DIR = os.path.expanduser("~/.zeroclaw/workspace")
 
-def load_all_workspace_knowledge():
-    knowledge_parts = []
-    # Explicit list of your core workspace files to guarantee they are loaded
-    target_files = [
-        "SOUL.md", 
-        "IDENTITY.md", 
-        "AGENTS.md", 
-        "upcoming_projects.md", 
-        "facility_booking.md", 
-        "issue_reporting.md"
-    ]
+def build_system_instruction():
+    instruction_parts = []
     
-    if os.path.exists(WORKSPACE_DIR):
-        for filename in target_files:
-            filepath = os.path.join(WORKSPACE_DIR, filename)
-            if os.path.exists(filepath):
-                try:
-                    with open(filepath, "r", encoding="utf-8") as f:
-                        content = f.read()
-                        knowledge_parts.append(f"=== FILE: {filename} ===\n{content}")
-                except Exception as e:
-                    knowledge_parts.append(f"=== FILE: {filename} (Error reading: {e}) ===")
-            else:
-                knowledge_parts.append(f"=== FILE: {filename} (Not Found) ===")
+    # 1. Load core persona files first as primary system rules
+    core_persona_files = ["SOUL.md", "IDENTITY.md", "AGENTS.md"]
+    data_files = ["upcoming_projects.md", "facility_booking.md", "issue_reporting.md", "community_events.md"]
+    
+    loaded = set()
+    
+    instruction_parts.append("=== SYSTEM PERSONA & RULES ===")
+    for filename in core_persona_files:
+        filepath = os.path.join(WORKSPACE_DIR, filename)
+        if os.path.exists(filepath):
+            loaded.add(filename)
+            try:
+                with open(filepath, "r", encoding="utf-8") as f:
+                    instruction_parts.append(f.read())
+            except Exception:
+                pass
                 
-        # Also grab any other markdown files just in case
+    instruction_parts.append("\n=== OFFICIAL TOWN DATA FILES ===")
+    for filename in data_files:
+        filepath = os.path.join(WORKSPACE_DIR, filename)
+        if os.path.exists(filepath):
+            loaded.add(filename)
+            try:
+                with open(filepath, "r", encoding="utf-8") as f:
+                    instruction_parts.append(f"--- {filename} ---\n{f.read()}")
+            except Exception:
+                pass
+                
+    # Load any remaining markdown files just in case
+    if os.path.exists(WORKSPACE_DIR):
         for filename in sorted(os.listdir(WORKSPACE_DIR)):
-            if filename.endswith(".md") and filename not in target_files:
+            if filename.endswith(".md") and filename not in loaded:
                 filepath = os.path.join(WORKSPACE_DIR, filename)
                 try:
                     with open(filepath, "r", encoding="utf-8") as f:
-                        content = f.read()
-                        knowledge_parts.append(f"=== FILE: {filename} ===\n{content}")
+                        instruction_parts.append(f"--- {filename} ---\n{f.read()}")
                 except Exception:
                     pass
                     
-    return "\n\n".join(knowledge_parts)
+    return "\n\n".join(instruction_parts)
 
-workspace_knowledge = load_all_workspace_knowledge()
-
-# Strict system instruction embedding your actual workspace files
-system_instruction = f"""You are an AI assistant whose exact persona, rules, and knowledge base are defined entirely by the workspace files provided below. Read, comprehend, and strictly follow the instructions, identity, and data found within these files for all responses.
-
-OFFICIAL WORKSPACE FILES & KNOWLEDGE:
-{workspace_knowledge}
-"""
+system_instruction = build_system_instruction()
 
 # Grab OpenRouter API key from environment
 api_key = os.environ.get("OPENAI_API_KEY") or os.environ.get("OPENROUTER_API_KEY")
