@@ -16,26 +16,33 @@ st.markdown("Your AI-powered community guide and civic helper.")
 
 # Load workspace paths
 WORKSPACE_DIR = os.path.expanduser("~/.zeroclaw/workspace")
+ALT_WORKSPACE_DIR = os.path.expanduser("~/.zeroclaw/workspace/westrive-deploy")
 
 # Helper function to read all markdown files in the workspace directory
 def load_all_workspace_knowledge():
     knowledge_parts = []
-    if os.path.exists(WORKSPACE_DIR):
-        for filename in sorted(os.listdir(WORKSPACE_DIR)):
-            if filename.endswith(".md"):
-                filepath = os.path.join(WORKSPACE_DIR, filename)
-                try:
-                    with open(filepath, "r", encoding="utf-8") as f:
-                        content = f.read()
-                        knowledge_parts.append(f"--- FILE: {filename} ---\n{content}")
-                except Exception:
-                    pass
+    dirs_to_check = [WORKSPACE_DIR, ALT_WORKSPACE_DIR]
+    seen_files = set()
+
+    for d in dirs_to_check:
+        if os.path.exists(d):
+            for filename in sorted(os.listdir(d)):
+                if filename.endswith(".md") and filename not in seen_files:
+                    seen_files.add(filename)
+                    filepath = os.path.join(d, filename)
+                    try:
+                        with open(filepath, "r", encoding="utf-8") as f:
+                            content = f.read()
+                            knowledge_parts.append(f"--- FILE: {filename} ---\n{content}")
+                    except Exception:
+                        pass
     return "\n\n".join(knowledge_parts)
 
 # Gather all markdown system prompts and data files dynamically
 workspace_knowledge = load_all_workspace_knowledge()
 
-system_instruction = f"""You are the Firndly and Helpful We Strive Civic Assistant orchestrator.
+system_instruction = f"""You are the Friendly and Helpful We Strive Civic Assistant orchestrator.
+
 RULES:
 1. GREETINGS & GENERAL HELP: For casual greetings (e.g., "Hi", "Hello", "How are you?") or general questions about what you can do, respond naturally, warmly, and helpfully as an AI civic assistant.
 2. TOWN & CIVIC DATA: When the user asks about specific town projects, facilities, bookings, or issue reporting, you MUST use ONLY the exact text and data found within the workspace files below. Never guess or hallucinate town facts.
