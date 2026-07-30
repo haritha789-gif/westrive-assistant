@@ -3,7 +3,7 @@ import openai
 from dotenv import load_dotenv
 import streamlit as st
 
-# Load environment variables from .env
+# Load environment variables
 load_dotenv(os.path.expanduser("~/.zeroclaw/workspace/.env"))
 load_dotenv(".env")
 
@@ -12,12 +12,29 @@ st.set_page_config(page_title="We Strive Civic Assistant", page_icon="🤖")
 st.title("We Strive Civic Assistant 🏙️")
 st.markdown("Your AI-powered community guide and civic helper.")
 
-# Let's get the absolute path dynamically to prevent OS expansion issues
-WORKSPACE_DIR = os.path.abspath(os.path.expanduser("~/.zeroclaw/workspace"))
+# Dynamically locate the workspace directory across local and cloud deployment environments
+def find_workspace_dir():
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    candidates = [
+        os.path.abspath(os.path.join(current_dir, "..")),  # Repository root (parent folder)
+        current_dir,                                       # Same directory as app.py
+        os.path.expanduser("~/.zeroclaw/workspace"),      # Local ZeroClaw workspace path
+        os.getcwd()                                       # Current working directory
+    ]
+    
+    for candidate in candidates:
+        if os.path.exists(candidate):
+            # Check if core markdown files exist here
+            if any(os.path.exists(os.path.join(candidate, fname)) for fname in ["AGENTS.md", "upcoming_projects.md", "IDENTITY.md"]):
+                return candidate
+                
+    return current_dir
+
+WORKSPACE_DIR = find_workspace_dir()
 
 def build_workspace_context():
     knowledge_parts = []
-    target_files = ["SOUL.md", "IDENTITY.md", "AGENTS.md", "upcoming_projects.md", "facility_booking.md", "issue_reporting.md", "community_events.md"]
+    target_files = ["SOUL.md", "IDENTITY.md", "AGENTS.md", "upcoming_projects.md", "facility_booking.md", "issue_reporting.md", "council_meetings.md"]
     loaded = set()
     
     if not os.path.exists(WORKSPACE_DIR):
@@ -28,7 +45,6 @@ def build_workspace_context():
         if os.path.exists(filepath):
             loaded.add(filename)
             try:
-                # Clean load, no line numbers or formatting hacks
                 with open(filepath, "r", encoding="utf-8") as f:
                     knowledge_parts.append(f"=== {filename} ===\n{f.read()}")
             except Exception as e:
@@ -40,10 +56,10 @@ def build_workspace_context():
 
 workspace_knowledge = build_workspace_context()
 
-# Visually expose what Python is loading so you can verify it's working
+# Sidebar diagnostics
 with st.sidebar:
     st.header("🔍 System Diagnostics")
-    st.write(f"**Target Directory:** `{WORKSPACE_DIR}`")
+    st.write(f"**Detected Workspace:** `{WORKSPACE_DIR}`")
     with st.expander("View Loaded Workspace Knowledge"):
         st.text(workspace_knowledge)
 
@@ -75,7 +91,6 @@ if prompt := st.chat_input("Ask a question about your community..."):
                     base_url="https://openrouter.ai/api/v1"
                 )
                 
-                # Clean, minimal system prompt that delegates completely to your files
                 system_prompt = (
                     "Your entire identity, persona, rules, and knowledge base are defined by the workspace files provided below. "
                     "Read, comprehend, and self-direct your responses strictly based on these files.\n\n"
