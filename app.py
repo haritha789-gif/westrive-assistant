@@ -14,52 +14,55 @@ st.set_page_config(
 st.title("We Strive Civic Assistant 🏙️")
 st.markdown("Your AI-powered community guide and civic helper.")
 
-# Load workspace paths
+# Explicit absolute paths pointing directly to your workspace files
 WORKSPACE_DIR = os.path.expanduser("~/.zeroclaw/workspace")
-ALT_WORKSPACE_DIR = os.path.expanduser("~/.zeroclaw/workspace/westrive-deploy")
 
-# Helper function to read all markdown files with data prioritization
 def load_all_workspace_knowledge():
     knowledge_parts = []
-    paths_to_check = [WORKSPACE_DIR, ALT_WORKSPACE_DIR]
+    # Explicit list of your core workspace files to guarantee they are loaded
+    target_files = [
+        "SOUL.md", 
+        "IDENTITY.md", 
+        "AGENTS.md", 
+        "upcoming_projects.md", 
+        "facility_booking.md", 
+        "issue_reporting.md"
+    ]
     
-    # Target identity, soul, and agent files first so they take absolute precedence
-    priority_files = ["USER.md", "SOUL.md", "IDENTITY.md", "AGENTS.md", "upcoming_projects.md", "facility_booking.md", "issue_reporting.md"]
-    loaded_files = set()
-    
-    for base_path in paths_to_check:
-        if os.path.exists(base_path):
-            # Load priority files first
-            for filename in priority_files:
-                filepath = os.path.join(base_path, filename)
-                if os.path.exists(filepath) and filename not in loaded_files:
-                    loaded_files.add(filename)
-                    try:
-                        with open(filepath, "r", encoding="utf-8") as f:
-                            content = f.read()
-                            knowledge_parts.append(f"=== FILE: {filename} ===\n{content}")
-                    except Exception:
-                        pass
-            
-            # Load any remaining markdown files
-            for filename in sorted(os.listdir(base_path)):
-                if filename.endswith(".md") and filename not in loaded_files:
-                    loaded_files.add(filename)
-                    filepath = os.path.join(base_path, filename)
-                    try:
-                        with open(filepath, "r", encoding="utf-8") as f:
-                            content = f.read()
-                            knowledge_parts.append(f"=== FILE: {filename} ===\n{content}")
-                    except Exception:
-                        pass
-                        
+    if os.path.exists(WORKSPACE_DIR):
+        for filename in target_files:
+            filepath = os.path.join(WORKSPACE_DIR, filename)
+            if os.path.exists(filepath):
+                try:
+                    with open(filepath, "r", encoding="utf-8") as f:
+                        content = f.read()
+                        knowledge_parts.append(f"=== FILE: {filename} ===\n{content}")
+                except Exception as e:
+                    knowledge_parts.append(f"=== FILE: {filename} (Error reading: {e}) ===")
+            else:
+                knowledge_parts.append(f"=== FILE: {filename} (Not Found) ===")
+                
+        # Also grab any other markdown files just in case
+        for filename in sorted(os.listdir(WORKSPACE_DIR)):
+            if filename.endswith(".md") and filename not in target_files:
+                filepath = os.path.join(WORKSPACE_DIR, filename)
+                try:
+                    with open(filepath, "r", encoding="utf-8") as f:
+                        content = f.read()
+                        knowledge_parts.append(f"=== FILE: {filename} ===\n{content}")
+                except Exception:
+                    pass
+                    
     return "\n\n".join(knowledge_parts)
 
-# Gather all markdown system prompts and data files dynamically
 workspace_knowledge = load_all_workspace_knowledge()
 
-# Feed the entire workspace knowledge directly as the system instruction so SOUL.md, IDENTITY.md, and AGENTS.md govern the core persona completely
-system_instruction = workspace_knowledge
+# Strict system instruction embedding your actual workspace files
+system_instruction = f"""You are the We Strive Civic Assistant for Fuquay-Varina. You must strictly obey the soul, identity, and agent rules defined in the workspace files below and use ONLY the official workspace data to answer questions.
+
+OFFICIAL WORKSPACE FILES & KNOWLEDGE:
+{workspace_knowledge}
+"""
 
 # Grab OpenRouter API key from environment
 api_key = os.environ.get("OPENAI_API_KEY") or os.environ.get("OPENROUTER_API_KEY")
@@ -92,7 +95,6 @@ if prompt := st.chat_input("Ask a question about your community..."):
                     base_url="https://openrouter.ai/api/v1"
                 )
                 
-                # Construct full message payload including system prompt and full history
                 messages_payload = [{"role": "system", "content": system_instruction}]
                 for msg in st.session_state.messages:
                     messages_payload.append({"role": msg["role"], "content": msg["content"]})
