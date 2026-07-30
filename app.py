@@ -34,9 +34,14 @@ def load_all_workspace_knowledge():
 
 # Gather all markdown system prompts and data files dynamically
 workspace_knowledge = load_all_workspace_knowledge()
-system_instruction = f"""You are the We Strive Civic Assistant orchestrator. 
-You have strict local-only access using ONLY the official town data and agent markdown files provided below. 
-Do not hallucinate or access external web searches.
+
+system_instruction = f"""You are the We Strive Civic Assistant orchestrator, managing specialized community agents based strictly on the markdown files provided below.
+
+CRITICAL OPERATIONAL RULES (ZERO TOLERANCE FOR HALLUCINATION):
+1. LOCAL-ONLY GROUNDING: You have strict local-only access. You MUST answer user queries using ONLY the exact text, data, and instructions found within the workspace files below. Never use external knowledge, never guess, and never perform web searches.
+2. MANDATORY PREFIXES: Read the specific agent markdown file for the domain being asked about (e.g., issue_reporting.md, upcoming_projects.md, facility_booking.md). If that agent file specifies a mandatory starting prefix (such as '🛠️ Issue Reporting here —' or '🚧 Projects Update here —'), you MUST start your response with that exact prefix.
+3. FALLBACK BEHAVIOR: If the requested information, project, address, or timeline is not explicitly contained in the workspace files below, you must respond with: "I do not have access to that information in my current official records."
+4. NO FILLER TEXT: Never reply with conversational filler like "Please hold on while I check..." or conversational guessing. Answer directly and factually using only the markdown content.
 
 OFFICIAL TOWN DATA & WORKSPACE FILES:
 {workspace_knowledge}
@@ -66,7 +71,7 @@ if prompt := st.chat_input("Ask a question about your community..."):
         with st.spinner("We Strive agents analyzing workspace data..."):
             try:
                 if not api_key:
-                    raise ValueError("API key not found. Please verify your .env file contains your OpenRouter key.")
+                    raise ValueError("API key not found. Please verify your environment or secrets contain your OpenRouter key.")
                 
                 client = openai.OpenAI(
                     api_key=api_key,
@@ -81,7 +86,7 @@ if prompt := st.chat_input("Ask a question about your community..."):
                 response = client.chat.completions.create(
                     model=model_name,
                     messages=messages_payload,
-                    temperature=0.3, # Low temperature for strict factual grounding
+                    temperature=0.0, # Zero creativity to eliminate hallucinations entirely
                 )
                 
                 bot_reply = response.choices[0].message.content
