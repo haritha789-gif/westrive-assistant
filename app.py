@@ -18,18 +18,18 @@ st.markdown("Your AI-powered community guide and civic helper.")
 WORKSPACE_DIR = os.path.expanduser("~/.zeroclaw/workspace")
 ALT_WORKSPACE_DIR = os.path.expanduser("~/.zeroclaw/workspace/westrive-deploy")
 
-# Helper function to read all markdown files in the workspace directory with data prioritization
+# Helper function to read all markdown files with data prioritization
 def load_all_workspace_knowledge():
     knowledge_parts = []
     paths_to_check = [WORKSPACE_DIR, ALT_WORKSPACE_DIR]
     
     # Target specific data files first so they are processed properly
-    priority_files = ["upcoming_projects.md", "facility_booking.md", "issue_reporting.md", "AGENTS.md"]
+    priority_files = ["AGENTS.md", "upcoming_projects.md", "facility_booking.md", "issue_reporting.md"]
     loaded_files = set()
     
     for base_path in paths_to_check:
         if os.path.exists(base_path):
-            # Load priority data files first
+            # Load priority files first
             for filename in priority_files:
                 filepath = os.path.join(base_path, filename)
                 if os.path.exists(filepath) and filename not in loaded_files:
@@ -37,7 +37,7 @@ def load_all_workspace_knowledge():
                     try:
                         with open(filepath, "r", encoding="utf-8") as f:
                             content = f.read()
-                            knowledge_parts.append(f"=== OFFICIAL DATA FILE: {filename} ===\n{content}")
+                            knowledge_parts.append(f"=== FILE: {filename} ===\n{content}")
                     except Exception:
                         pass
             
@@ -58,14 +58,10 @@ def load_all_workspace_knowledge():
 # Gather all markdown system prompts and data files dynamically
 workspace_knowledge = load_all_workspace_knowledge()
 
-system_instruction = f"""You are the Friendly and Helpful We Strive Civic Assistant orchestrator for Fuquay-Varina.
+# Keep system instruction clean and let AGENTS.md guide the orchestrator behavior
+system_instruction = f"""You are the We Strive Civic Assistant orchestrator. Follow all operational guidelines, domain routing, and formatting rules specified in AGENTS.md using ONLY the official town data files provided below.
 
-OPERATIONAL GUIDELINES:
-1. Use the official town data files provided below to answer questions about upcoming projects, facility bookings, and town issues accurately.
-2. Be helpful, conversational, and direct. If a project is mentioned in the files (such as projects on Purfoy Road or Academy Village), extract and summarize those exact details for the user clearly.
-3. For casual greetings, respond warmly.
-
-OFFICIAL TOWN DATA & WORKSPACE FILES:
+OFFICIAL TOWN KNOWLEDGE & FILES:
 {workspace_knowledge}
 """
 
@@ -108,7 +104,7 @@ if prompt := st.chat_input("Ask a question about your community..."):
                 response = client.chat.completions.create(
                     model=model_name,
                     messages=messages_payload,
-                    temperature=0.0, # Zero creativity to eliminate hallucinations entirely
+                    temperature=0.1, # Slight flexibility for keyword/semantic matching without hallucinations
                 )
                 
                 bot_reply = response.choices[0].message.content
